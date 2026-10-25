@@ -1,0 +1,25 @@
+name: Manter servidor ativo
+
+# O plano gratuito do Supabase pausa projetos sem acesso ao banco por 7 dias.
+# Esta consulta leve a cada 3 dias mantém o projeto ativo, sem custo.
+on:
+  schedule:
+    - cron: '17 11 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    env:
+      URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+      KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - name: Consultar alertas (acesso real ao banco)
+        run: |
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then echo "::warning::Variáveis do Supabase não configuradas."; exit 0; fi
+          AUTH=""
+          case "$KEY" in eyJ*) AUTH="Authorization: Bearer $KEY";; esac
+          curl -sS --fail-with-body -X POST "$URL/rest/v1/rpc/alerts_near" \
+            -H "apikey: $KEY" ${AUTH:+-H "$AUTH"} -H "Content-Type: application/json" \
+            -d '{"p_lat": -23.55, "p_lng": -46.63, "p_radius_km": 1}' > /dev/null
+          echo "Servidor ativo."
