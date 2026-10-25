@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Vou de Quê?",
+    "slug": "vou-de-que",
+    "scheme": "voudeque",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#18212E",
+    "ios": {
+      "bundleIdentifier": "com.voudeque.app",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Usamos sua localização para preencher a origem do trajeto e mostrar alertas perto de você."
+      }
+    },
+    "android": {
+      "package": "com.voudeque.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#18212E"
+      },
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "backgroundColor": "#18212E"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Usamos sua localização para preencher a origem do trajeto e mostrar alertas perto de você."
+        }
+      ]
+    ]
+  }
+}

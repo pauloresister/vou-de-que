@@ -1,0 +1,15 @@
+# Blueprint do Render: New > Blueprint > selecione este repositório.
+services:
+  - type: web
+    name: vou-de-que-api
+    runtime: docker
+    rootDir: backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: HERE_API_KEY
+        sync: false
+      - key: LOCAL_TIMEZONE
+        value: America/Sao_Paulo
+      - key: USER_AGENT
+        value: VouDeQue/1.0 (+https://github.com/seu-usuario/vou-de-que)

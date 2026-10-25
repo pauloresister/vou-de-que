@@ -1,0 +1,19 @@
+{
+  "combustivel": {
+    "referencia": "ANP, Levantamento de Preços de Combustíveis, semana de 11 a 17/10/2026",
+    "atualizadoEm": "2026-10-17",
+    "nacional": { "gasolina": 6.53, "etanol": 4.11, "diesel": 7.0 },
+    "porUF": {
+      "SP": { "etanol": 3.86 }
+    }
+  },
+  "tarifas": {
+    "padrao": {
+      "referencia": "SPTrans e Governo de SP, valores vigentes desde 06/01/2026",
+      "onibus": 5.3,
+      "trilhos": 5.4,
+      "integracao": 9.38
+    },
+    "porUF": {}
+  }
+}
