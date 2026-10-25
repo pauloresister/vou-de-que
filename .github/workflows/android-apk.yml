@@ -1,0 +1,72 @@
+name: APK Android
+
+on:
+  push:
+    branches: [main]
+    paths: ['mobile/**', '.github/workflows/android-apk.yml']
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # Embutidos no app no momento do build. Configure em Settings > Secrets and variables > Actions > Variables.
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar configuração
+        run: |
+          if [ -z "$EXPO_PUBLIC_SUPABASE_URL" ] || [ -z "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ]; then
+            echo "::error::Defina EXPO_PUBLIC_SUPABASE_URL e EXPO_PUBLIC_SUPABASE_ANON_KEY em Settings > Secrets and variables > Actions > Variables."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Instalar dependências
+        working-directory: mobile
+        run: npm ci
+
+      - name: Checar tipos
+        working-directory: mobile
+        run: npx tsc --noEmit
+
+      - name: Gerar projeto nativo
+        working-directory: mobile
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Compilar APK
+        working-directory: mobile/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Renomear APK
+        run: cp mobile/android/app/build/outputs/apk/release/app-release.apk vou-de-que.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vou-de-que-apk
+          path: vou-de-que.apk
+
+      - name: Publicar na página de Releases (ao criar tag v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: vou-de-que.apk
