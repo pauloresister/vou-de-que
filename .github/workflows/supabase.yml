@@ -1,0 +1,77 @@
+name: Servidor (Supabase)
+
+# Testa a Edge Function e, se os segredos estiverem configurados, publica tudo no Supabase gratuito:
+# banco (tabela de alertas, funções seguras, tempo real) + função "api" + chave do TomTom.
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/**', '.github/workflows/supabase.yml']
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: supabase/functions
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Checar tipos
+        run: deno check api/index.ts tests/*.ts
+      - name: Testes
+        run: deno test --allow-env --allow-net tests/
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+      TOMTOM_API_KEY: ${{ secrets.TOMTOM_API_KEY }}
+      APP_USER_AGENT: ${{ vars.APP_USER_AGENT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar configuração
+        id: check
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$SUPABASE_PROJECT_REF" ] || [ -z "$SUPABASE_DB_PASSWORD" ]; then
+            echo "::warning::Configure SUPABASE_ACCESS_TOKEN e SUPABASE_DB_PASSWORD (Secrets) e SUPABASE_PROJECT_REF (Variables) para publicar. Veja o README."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: supabase/setup-cli@v1
+        if: steps.check.outputs.ready == 'true'
+        with:
+          version: latest
+
+      - name: Conectar ao projeto
+        if: steps.check.outputs.ready == 'true'
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Criar ou atualizar o banco
+        if: steps.check.outputs.ready == 'true'
+        run: supabase db push --linked --password "$SUPABASE_DB_PASSWORD" --yes
+
+      - name: Guardar chaves da função
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          # Arquivo temporário evita problemas com espaços no User-Agent.
+          : > /tmp/segredos.env
+          [ -n "$TOMTOM_API_KEY" ] && echo "TOMTOM_API_KEY=$TOMTOM_API_KEY" >> /tmp/segredos.env
+          [ -n "$APP_USER_AGENT" ] && echo "APP_USER_AGENT=\"$APP_USER_AGENT\"" >> /tmp/segredos.env
+          if [ -s /tmp/segredos.env ]; then
+            supabase secrets set --env-file /tmp/segredos.env --project-ref "$SUPABASE_PROJECT_REF"
+          fi
+          [ -z "$TOMTOM_API_KEY" ] && echo "::notice::Sem TOMTOM_API_KEY: o carro usará tempo estimado pelo horário."
+          rm -f /tmp/segredos.env
+
+      - name: Publicar a função "api"
+        if: steps.check.outputs.ready == 'true'
+        run: supabase functions deploy api --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt --use-api
